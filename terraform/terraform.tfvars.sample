@@ -1,0 +1,19 @@
+# AWS
+aws_key_name      = "some-key"
+aws_key_pair_file = "~/.ssh/some-key.pem"
+
+# Network
+vpc_id    = "vpc-12345abc"    # default VPC
+subnet_id = "subnet-12345abc" # us-east-1
+
+# Habitat variables
+habitat_origin        = "some-origin"
+habitat_auth_token    = "~/Documents/builder-auth-token"
+habitat_ring_key_file = "~/.hab/cache/keys/webinar-ring-20181212123456.sym.key"
+
+vault_channel  = "stable"
+consul_channel = "stable"
+
+# Tags
+tag_environment = "dev"
+tag_prefix      = "dev"
