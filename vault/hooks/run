@@ -1,0 +1,73 @@
+#!/bin/bash -xe
+
+exec 2>&1
+
+DEVMODE={{cfg.dev.mode}}
+UNSEAL={{cfg.config.unseal}}
+
+if [ "$DEVMODE" = true ] ; then
+  exec vault server -dev-listen-address=0.0.0.0:8200 -dev
+else
+
+  # Start Vault Server
+  vault server -config={{pkg.svc_config_path}}/settings.hcl &
+
+  # Set PID to backgrounded Vault Process
+  PID=$!
+
+  VAULT_ADDR="http://{{cfg.listener.location}}:{{cfg.listener.port}}"
+  VAULT_INIT="{{pkg.svc_data_path}}/vault.init"
+
+  until curl ${VAULT_ADDR}/v1/sys/health &> /dev/null
+  do
+    echo "Waiting for vault to come up"
+    sleep 1
+  done
+  sleep 1
+
+  SEALED=$(curl -s http://0.0.0.0:8200/v1/sys/health | jq .sealed)
+  INITIALIZED=$(curl -s http://0.0.0.0:8200/v1/sys/health | jq .initialized)
+
+  if [ "$INITIALIZED" = true ] ; then
+    echo "Vault Already Initialized"
+    VAULT_INIT="{{pkg.svc_files_path}}/unseal"
+
+  else
+    # Initialize Vault
+    echo "Initializing Vault"
+    vault operator init -address ${VAULT_ADDR} | tee ${VAULT_INIT} > /dev/null
+
+    UNSEAL_FILE="{{pkg.svc_data_path}}/unseal"
+    ROOT_FILE="{{pkg.svc_data_path}}/root_token"
+
+    cat ${VAULT_INIT} | grep 'Unseal Key' >> ${UNSEAL_FILE}
+    cat ${VAULT_INIT} | grep 'Initial Root Token' >> ${ROOT_FILE}
+
+    for key in $(cat ${UNSEAL_FILE} | awk '{print $4}'); do keys="$keys \"$key\","; done
+
+    # Create a new Configuration File with newly created Root Token & Unseal Keys
+    cat <<EOT > {{pkg.svc_data_path}}/config.toml
+[config]
+unseal = true
+token = "$(cat ${ROOT_FILE} | awk '{print $4}')"
+unseal_keys = [$(echo $keys | sed 's/,*$//g')]
+EOT
+
+    # Apply the new configuration to allow all of our nodes to receive the token & keys
+    hab config apply "{{svc.service}}.{{svc.group}}" "$(date +%s)" "{{pkg.svc_data_path}}/config.toml"
+  fi
+
+
+  {{#if cfg.config.unseal ~}}
+    # Unseal vault using the keys we grabbed during initialization
+    echo "unsealing"
+    {{#each cfg.config.unseal_keys as |key| ~}}
+      vault operator unseal -address ${VAULT_ADDR} "{{key}}"
+    {{/each ~}}
+
+  {{else}}
+    echo "Vault is already unsealed"
+  {{/if ~}}
+
+  wait $PID
+fi

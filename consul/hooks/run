@@ -1,0 +1,45 @@
+#!/bin/bash -xe
+
+exec 2>&1
+
+SERVERMODE={{cfg.server.mode}}
+if [ "$SERVERMODE" = true ] ; then
+
+  {{#if svc.me.leader ~}}
+  # If we are the leader, generate an encryption token if one was not specified
+
+    {{#if cfg.encrypt.token ~}}
+      echo "Waiting for encryption token!"
+
+    {{else ~}}
+      # Generate a token if one does not exist
+      TOKEN=$(consul keygen)
+
+      # Create new configuration file with generated encryption token
+      cat <<TOML > {{pkg.svc_data_path}}/token.toml
+[encrypt]
+token = "${TOKEN}"
+TOML
+
+      # Apply new configuration to service group to propagate encryption token to all nodes
+      hab config apply "{{svc.service}}.{{svc.group}}" $(date +%s) "{{pkg.svc_data_path}}/token.toml"
+    {{/if ~}} # end of if/else for cfg.encrypt.token
+
+  {{else ~}} # else for svc.me.leader, this will be followers
+    # wait for leader
+    until curl {{svc.leader.sys.ip}}:{{cfg.ports.http}}/v1/agent/members;
+    do
+      echo "Waiting for {{svc.leader.sys.ip}}:{{cfg.ports.http}}/v1/agent/members"
+      sleep 1
+    done
+  {{/if ~}}
+
+  {{#if cfg.encrypt.token ~}}
+    consul agent {{~#if cfg.website}} -ui {{~/if}} -server -bootstrap-expect {{cfg.bootstrap.expect}} -config-file={{pkg.svc_config_path}}/basic_config.json
+  {{else ~}}
+    echo "Waiting for encryption token!"
+  {{/if ~}}
+
+else
+  exec consul agent -dev
+fi

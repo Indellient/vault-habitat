@@ -1,0 +1,26 @@
+{
+  {{#if cfg.encrypt.token ~}}
+  "encrypt": "{{cfg.encrypt.token}}",
+  {{/if ~}}
+  "datacenter": "{{cfg.server.datacenter}}",
+  "data_dir": "{{cfg.server.data-dir}}",
+  "log_level": "{{cfg.server.loglevel}}",
+  "leave_on_terminate": {{cfg.server.leave_on_terminate}},
+  "bind_addr": "{{sys.ip}}",
+  "client_addr": "{{cfg.client.bind}}",
+  "server": {{cfg.server.mode}},
+  "ports": {
+    "dns": {{cfg.ports.dns}},
+    "http": {{cfg.ports.http}},
+    "https": {{cfg.ports.https}},
+    "serf_lan": {{cfg.ports.serf_lan}},
+    "serf_wan": {{cfg.ports.serf_wan}},
+    "server": {{cfg.ports.server}}
+  },
+  "retry_join": [
+    {{#eachAlive svc.members as |member| ~}}
+    "{{member.sys.ip}}",
+    {{/eachAlive}}
+    "127.0.0.1"
+  ]
+}

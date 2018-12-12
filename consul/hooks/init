@@ -1,0 +1,7 @@
+#!/bin/bash
+
+chown -R {{pkg.svc_user}}:{{pkg.svc_group}} "{{pkg.svc_config_path}}" \
+  "{{pkg.svc_data_path}}" \
+  "{{pkg.svc_files_path}}" \
+  "{{pkg.svc_static_path}}" \
+  "{{pkg.svc_var_path}}"

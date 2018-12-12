@@ -1,0 +1,54 @@
+driver:
+  name: docker
+  use_sudo: false
+
+provisioner:
+  name: habitat
+  package_origin: <%= ENV['HAB_ORIGIN'] || `cat ./plan.sh`.split("\n").select { |s| s.include?('pkg_origin') }.first.split('=').last %>
+  package_name: consul
+  install_latest_artifact: true
+
+verifier:
+  name: inspec
+
+platforms:
+  - name: centos-7.4
+
+suites:
+  - name: consul_leonardo
+    provisioner:
+      service_update_strategy: rolling
+      service_topology: leader
+    driver:
+      instance_name: leonardo
+      forward:
+        - 8300:8300
+        - 8500:8500
+        - 8600:8600
+
+  - name: consul_donatello
+    driver:
+      links: "leonardo:leonardo"
+    provisioner:
+      service_update_strategy: rolling
+      service_topology: leader
+      hab_sup_peer:
+        - leonardo
+
+  - name: consul_michelangelo
+    driver:
+      links: "leonardo:leonardo"
+    provisioner:
+      service_update_strategy: rolling
+      service_topology: leader
+      hab_sup_peer:
+        - leonardo
+
+  - name: consul_raphael
+    driver:
+      links: "leonardo:leonardo"
+    provisioner:
+      service_update_strategy: rolling
+      service_topology: leader
+      hab_sup_peer:
+        - leonardo

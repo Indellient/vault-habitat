@@ -1,0 +1,132 @@
+driver:
+  name: docker
+  use_sudo: false
+
+provisioner:
+  name: habitat
+
+verifier:
+  name: inspec
+
+platforms:
+  - name: centos-7.4
+
+suites:
+  - name: consul_leonardo
+    provisioner:
+      depot_url: http://bldr.bluepipeline.io
+      package_origin: skylerto
+      package_name: consul
+      service_update_strategy: rolling
+      service_topology: leader
+      config_directory: test/files/consul
+    driver:
+      instance_name: leonardo
+      forward:
+        - 8300:8300
+        - 8500:8500
+        - 8600:8600
+        - 9631:9631
+        - 9632:9632
+    verifier:
+      inspec_tests:
+      - test/smoke/consul
+
+  - name: consul_donatello
+    provisioner:
+      depot_url: http://bldr.bluepipeline.io
+      package_origin: skylerto
+      package_name: consul
+      service_update_strategy: rolling
+      service_topology: leader
+      config_directory: test/files/consul
+      hab_sup_peer:
+        - leonardo
+    driver:
+      links: "leonardo:leonardo"
+    verifier:
+      inspec_tests:
+      - test/smoke/consul
+
+  - name: consul_michelangelo
+    provisioner:
+      depot_url: http://bldr.bluepipeline.io
+      package_origin: skylerto
+      package_name: consul
+      service_update_strategy: rolling
+      service_topology: leader
+      config_directory: test/files/consul
+      hab_sup_peer:
+        - leonardo
+    driver:
+      links: "leonardo:leonardo"
+    verifier:
+      inspec_tests:
+      - test/smoke/consul
+
+  - name: vault_lennon
+    provisioner:
+      artifact_name: <%= ENV['HAB_ARTIFACT_NAME'] || ::File.read('./results/last_build.env').split("\n").select { |s| s.include?('pkg_artifact') }.first.split('=').last %>
+      install_latest_artifact: true
+      service_update_strategy: rolling
+      service_topology: leader
+      config_directory: test/files/vault
+      hab_sup_bind:
+        - backend:consul.default
+      hab_sup_peer:
+        - leonardo
+    driver:
+      links: "leonardo:leonardo"
+      instance_name: lennon
+      cap_add:
+        - IPC_LOCK
+      forward:
+        - 8200:8200
+        - 8201:8201
+        - 9641:9631
+        - 9642:9632
+    verifier:
+      inspec_tests:
+      - test/smoke/vault
+
+  - name: vault_mccartney
+    provisioner:
+      artifact_name: <%= ENV['HAB_ARTIFACT_NAME'] || ::File.read('./results/last_build.env').split("\n").select { |s| s.include?('pkg_artifact') }.first.split('=').last %>
+      install_latest_artifact: true
+      service_topology: leader
+      service_update_strategy: rolling
+      config_directory: test/files/vault
+      hab_sup_bind:
+        - backend:consul.default
+      hab_sup_peer:
+        - leonardo
+    driver:
+      cap_add:
+        - IPC_LOCK
+      links:
+        - "leonardo:leonardo"
+        - "lennon:lennon"
+    verifier:
+      inspec_tests:
+      - test/smoke/vault
+
+  - name: vault_harrison
+    provisioner:
+      artifact_name: <%= ENV['HAB_ARTIFACT_NAME'] || ::File.read('./results/last_build.env').split("\n").select { |s| s.include?('pkg_artifact') }.first.split('=').last %>
+      install_latest_artifact: true
+      service_topology: leader
+      service_update_strategy: rolling
+      config_directory: test/files/vault
+      hab_sup_bind:
+        - backend:consul.default
+      hab_sup_peer:
+        - leonardo
+    driver:
+      cap_add:
+        - IPC_LOCK
+      links:
+        - "leonardo:leonardo"
+        - "lennon:lennon"
+    verifier:
+      inspec_tests:
+      - test/smoke/vault

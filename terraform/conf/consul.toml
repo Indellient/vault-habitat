@@ -1,0 +1,40 @@
+# Use this file to templatize your application's native configuration files.
+# See the docs at https://www.habitat.sh/docs/create-packages-configure/.
+# You can safely delete this file if you don't need it.
+# If you would like the web gui on the agent
+website = true
+
+# The options for consul are available here
+# https://www.consul.io/docs/agent/options.html
+[bootstrap]
+expect = "3"
+
+[server]
+bind = "127.0.0.1"
+data-dir = "/hab/svc/consul/data/consul"
+datacenter = "east-aws"
+loglevel = "INFO"
+# switch this to false you want to start in DEVMODE
+# https://www.consul.io/docs/guides/bootstrapping.html
+mode = true
+
+[ports]
+# The DNS server, -1 to disable
+dns = 8600
+# The HTTP API, -1 to disable
+http = 8500
+# The HTTPS API, -1 to disable
+https = -1
+# The Serf LAN port
+serf_lan = 8301
+# The Serf WAN port
+serf_wan = 8302
+# Server RPC address
+server = 8300
+
+[client]
+bind = "0.0.0.0"
+
+# Specify the encrypt token here to join
+# [encrypt]
+# token = ""
