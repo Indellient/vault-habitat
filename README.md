@@ -1,4 +1,4 @@
-# HashiCorp Vault and Chef Habitat Webinar
+# HashiCorp Vault and Chef Habitat
 
 This repository holds the code for quickly deploying HashiCorp vault backed by
 Consul running inside Chef Habitat.
