@@ -85,10 +85,11 @@ First, the packages need to be built. This can be easily done with habitat studi
 
 ```
 $ pushd consul
-$ hab studio build
+$ hab pkg build .
 $ popd
 $ pushd vault
-$ hab studio build
+$ hab pkg build .
+$ popd
 ```
 
 Once this is completed, you can now run the kitchen code!
@@ -100,7 +101,7 @@ $ kitchen converge
 To get the vault root token, grab it from the habitat census:
 
 ```
-$ curl -s localhost:9631/census | jq -r '.["census_groups"]["vault.default"].service_config.value.config.token'
+$ curl -s localhost:9631/census | jq -r '.["census_groups"]["vault.default"].service_config.value.token'
 ```
 
 The Consul UI is now available here: `http://localhost:8200/ui`

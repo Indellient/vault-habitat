@@ -2,72 +2,113 @@
 
 exec 2>&1
 
-DEVMODE={{cfg.dev.mode}}
-UNSEAL={{cfg.config.unseal}}
+if [ {{cfg.dev.mode}} = true ]
+then
+  echo "Starting vault server in dev mode..."
+  exec vault server \
+    -dev \
+    -dev-listen-address={{cfg.listener.location}}:{{cfg.listener.port}}
 
-if [ "$DEVMODE" = true ] ; then
-  exec vault server -dev-listen-address=0.0.0.0:8200 -dev
 else
+  # Set variables
+  UNSEAL_KEYS=({{#each cfg.unseal_keys as |key| ~}}"{{key}}"{{#unless @last}} {{/unless}}{{/each}})
+  export VAULT_ADDR="http://{{cfg.listener.location}}:{{cfg.listener.port}}"
+  export VAULT_TOKEN="{{cfg.token}}"
 
-  # Start Vault Server
+  # Shortcut to determine if this is the leader in a leader-follower topology
+  {{#unless svc.me.leader ~}}
+    {{#unless svc.me.follower ~}}
+    TOPOLOGY="standalone"
+    TOPOLOGY_ROLE=$TOPOLOGY
+    {{/unless ~}}
+  {{/unless ~}}
+
+  {{# if svc.me.leader ~}}
+    {{#unless svc.me.follower ~}}
+    TOPOLOGY="leader"
+    TOPOLOGY_ROLE=$TOPOLOGY
+    {{/unless ~}}
+  {{/if ~}}
+
+  {{# if svc.me.follower ~}}
+    {{#unless svc.me.leader ~}}
+    TOPOLOGY="leader"
+    TOPOLOGY_ROLE="follower"
+    {{/unless ~}}
+  {{/if ~}}
+
+  # Start server with templated config file
+  echo "Starting vault server..."
   vault server -config={{pkg.svc_config_path}}/settings.hcl &
-
-  # Set PID to backgrounded Vault Process
   PID=$!
 
-  VAULT_ADDR="http://{{cfg.listener.location}}:{{cfg.listener.port}}"
-  VAULT_INIT="{{pkg.svc_data_path}}/vault.init"
-
-  until curl ${VAULT_ADDR}/v1/sys/health &> /dev/null
+  # Query Vault API
+  # 0 - Unsealed
+  # 1 - Error
+  # 2 - Sealed
+  until STATUS=$(vault status -format "json"); [ $? -ne 1 ]
   do
     echo "Waiting for vault to come up"
     sleep 1
   done
-  sleep 1
 
-  SEALED=$(curl -s http://0.0.0.0:8200/v1/sys/health | jq .sealed)
-  INITIALIZED=$(curl -s http://0.0.0.0:8200/v1/sys/health | jq .initialized)
+  INITIALIZED=$(echo $STATUS | jq .initialized)
+  SEALED=$(echo $STATUS | jq .sealed)
 
-  if [ "$INITIALIZED" = true ] ; then
-    echo "Vault Already Initialized"
-    VAULT_INIT="{{pkg.svc_files_path}}/unseal"
+  if [ "$INITIALIZED" = true ]
+  then
+    # If the instance is initialized, unseal it
+    echo "Vault already initialized"
+
+    if [ ${#UNSEAL_KEYS[@]} -ne 0 ]
+    then
+      echo "Vault initialized, but sealed. Unseal keys found; Unsealing..."
+
+      for key in "${UNSEAL_KEYS[@]}"
+      do
+        vault operator unseal $key;
+      done
+
+      engines=$(vault secrets list --format "json" | jq -r '.[].type')
+      {{#each cfg.engines as |engine| ~}}
+        if [[ ! "${engines[@]}" =~ "{{engine.name}}" ]]; then
+          echo "Enabling secret engine {{engine.name}}"
+          vault secrets enable --path {{engine.path}} {{engine.name}}
+        else
+          echo "Secret engine {{engine.name}} already enabled; skipping..."
+        fi
+      {{/each ~}}
+
+      # Block on vault server process
+      wait $PID
+
+    else
+      # Initialized, no unseal keys. We don't have the config yet.
+      echo "Vault initialized, but sealed. No unseal keys found; shutting down..."
+      # Sleep then fall through to kill command & let Habitat restart service
+      sleep 5
+    fi
+
+  elif [ "$TOPOLOGY" = "standalone" ] || [ $TOPOLOGY_ROLE = "leader" ]
+  then
+    # If this instance is not initilaized, the leader should initialize
+    echo "Vault not initialized. Initializing...."
+    init=$(vault operator init -format "json")
+
+    echo "Applying new config with unseal keys..."
+    # Apply config then fall through to kill command & let Habitat restart service
+    hab config apply "{{svc.service}}.{{svc.group}}" "$(date +%s)" <<EOF
+token       = $(echo $init | jq .root_token)
+unseal_keys = $(echo $init | jq .unseal_keys_b64)
+EOF
 
   else
-    # Initialize Vault
-    echo "Initializing Vault"
-    vault operator init -address ${VAULT_ADDR} | tee ${VAULT_INIT} > /dev/null
-
-    UNSEAL_FILE="{{pkg.svc_data_path}}/unseal"
-    ROOT_FILE="{{pkg.svc_data_path}}/root_token"
-
-    cat ${VAULT_INIT} | grep 'Unseal Key' >> ${UNSEAL_FILE}
-    cat ${VAULT_INIT} | grep 'Initial Root Token' >> ${ROOT_FILE}
-
-    for key in $(cat ${UNSEAL_FILE} | awk '{print $4}'); do keys="$keys \"$key\","; done
-
-    # Create a new Configuration File with newly created Root Token & Unseal Keys
-    cat <<EOT > {{pkg.svc_data_path}}/config.toml
-[config]
-unseal = true
-token = "$(cat ${ROOT_FILE} | awk '{print $4}')"
-unseal_keys = [$(echo $keys | sed 's/,*$//g')]
-EOT
-
-    # Apply the new configuration to allow all of our nodes to receive the token & keys
-    hab config apply "{{svc.service}}.{{svc.group}}" "$(date +%s)" "{{pkg.svc_data_path}}/config.toml"
+    # Uninitialized, follower in leader topology; wait for leader to initialize
+    echo "Vault not initalized. Waiting for leader to initalize..."
+    # Sleep then fall through to kill command & let Habitat restart service
+    sleep 5
   fi
 
-
-  {{#if cfg.config.unseal ~}}
-    # Unseal vault using the keys we grabbed during initialization
-    echo "unsealing"
-    {{#each cfg.config.unseal_keys as |key| ~}}
-      vault operator unseal -address ${VAULT_ADDR} "{{key}}"
-    {{/each ~}}
-
-  {{else}}
-    echo "Vault is already unsealed"
-  {{/if ~}}
-
-  wait $PID
+  # Kill vault server
+  kill $PID
 fi

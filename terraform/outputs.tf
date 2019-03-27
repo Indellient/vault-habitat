@@ -15,5 +15,5 @@ output "vault_ui" {
 }
 
 output "vault_token" {
-  value = "curl -s ${aws_instance.vault.0.public_dns}:9631/census | jq -r '.[\"census_groups\"][\"vault.default\"].service_config.value.config.token'"
+  value = "curl -s ${aws_instance.vault.0.public_dns}:9631/census | jq -r '.[\"census_groups\"][\"vault.default\"].service_config.value.token'"
 }
