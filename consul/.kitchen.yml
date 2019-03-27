@@ -4,9 +4,10 @@ driver:
 
 provisioner:
   name: habitat
-  package_origin: <%= ENV['HAB_ORIGIN'] || `cat ./plan.sh`.split("\n").select { |s| s.include?('pkg_origin') }.first.split('=').last %>
+  package_origin: <%= ENV['HAB_ORIGIN'] || ::File.read('./results/last_build.env').split("\n").select { |s| s.include?('pkg_origin') }.first.split('=').last %>
   package_name: consul
   install_latest_artifact: true
+  artifact_name: <%= ENV['HAB_ARTIFACT_NAME'] || ::File.read('./results/last_build.env').split("\n").select { |s| s.include?('pkg_artifact') }.first.split('=').last %>
 
 verifier:
   name: inspec

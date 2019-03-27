@@ -8,7 +8,9 @@
   "leave_on_terminate": {{cfg.server.leave_on_terminate}},
   "bind_addr": "{{sys.ip}}",
   "client_addr": "{{cfg.client.bind}}",
-  "server": {{cfg.server.mode}},
+  "server": true,
+  "ui": {{cfg.website}},
+  "bootstrap_expect": {{cfg.bootstrap.expect}},
   "ports": {
     "dns": {{cfg.ports.dns}},
     "http": {{cfg.ports.http}},

@@ -8,18 +8,20 @@ exec 2>&1
     echo "Waiting to install key"
     sleep 1
   done
-
+  
   until consul keyring --use={{cfg.encrypt.token}}
   do
     echo "Waiting to install key"
     sleep 1
   done
-
-  until consul join {{svc.leader.sys.ip}}
-  do
-    echo "Waiting to join {{svc.leader.sys.ip}}"
-    sleep 1
-  done
+  
+  {{#if svc.me.follower ~}}
+    until consul join {{svc.leader.sys.ip}}
+    do
+      echo "Waiting to join {{svc.leader.sys.ip}}"
+      sleep 1
+    done
+  {{/if ~}}
 {{else ~}}
   echo "Waiting for encryption token!"
 {{/if ~}}

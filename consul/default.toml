@@ -6,6 +6,10 @@ website = true
 
 # The options for consul are available here
 # https://www.consul.io/docs/agent/options.html
+
+# 'bootstrap.expect' is only consumed by the package in a leader topology.
+# in the standalone topology, the value 1 is always passed to the
+# -bootsrap-expect Consul flag
 [bootstrap]
 expect = "3"
 
@@ -15,9 +19,6 @@ data-dir = "/hab/svc/consul/data/consul"
 datacenter = "east-aws"
 leave_on_terminate = true
 loglevel = "INFO"
-# switch this to false you want to start in DEVMODE
-# https://www.consul.io/docs/guides/bootstrapping.html
-mode = true
 
 [ports]
 # The DNS server, -1 to disable

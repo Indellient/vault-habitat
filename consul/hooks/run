@@ -2,44 +2,59 @@
 
 exec 2>&1
 
-SERVERMODE={{cfg.server.mode}}
-if [ "$SERVERMODE" = true ] ; then
+{{#if cfg.encrypt.token ~}}
+  TOKEN_EXISTS=1
+{{else ~}}
+  TOKEN_EXISTS=0
+{{/if ~}}
 
-  {{#if svc.me.leader ~}}
-  # If we are the leader, generate an encryption token if one was not specified
+{{#unless svc.me.leader ~}}
+  {{#unless svc.me.follower ~}}
+    TOPOLOGY="standalone"
+    TOPOLOGY_ROLE=$TOPOLOGY
+  {{/unless ~}}
+{{/unless ~}}
 
-    {{#if cfg.encrypt.token ~}}
-      echo "Waiting for encryption token!"
+{{# if svc.me.leader ~}}
+  {{#unless svc.me.follower ~}}
+    TOPOLOGY="leader"
+    TOPOLOGY_ROLE=$TOPOLOGY
+  {{/unless ~}}
+{{/if ~}}
 
-    {{else ~}}
-      # Generate a token if one does not exist
-      TOKEN=$(consul keygen)
+{{# if svc.me.follower ~}}
+  {{#unless svc.me.leader ~}}
+    TOPOLOGY="leader"
+    TOPOLOGY_ROLE="follower"
+  {{/unless ~}}
+{{/if ~}}
 
-      # Create new configuration file with generated encryption token
-      cat <<TOML > {{pkg.svc_data_path}}/token.toml
+warn_wait_encrypt_token() {
+  echo "Waiting for encryption token!"
+}
+
+generate_encrypt_token() {
+  TOKEN=$(consul keygen)
+  cat <<TOML > {{pkg.svc_data_path}}/token.toml
 [encrypt]
 token = "${TOKEN}"
 TOML
+  hab config apply "{{svc.service}}.{{svc.group}}" $(date +%s) "{{pkg.svc_data_path}}/token.toml"
+}
 
-      # Apply new configuration to service group to propagate encryption token to all nodes
-      hab config apply "{{svc.service}}.{{svc.group}}" $(date +%s) "{{pkg.svc_data_path}}/token.toml"
-    {{/if ~}} # end of if/else for cfg.encrypt.token
-
-  {{else ~}} # else for svc.me.leader, this will be followers
-    # wait for leader
+if [ $TOKEN_EXISTS -eq 0 ] && ([ $TOPOLOGY_ROLE = "leader" ] || [ $TOPOLOGY_ROLE = "standalone" ]) ; then
+  generate_encrypt_token
+elif [ $TOKEN_EXISTS -eq 0 ] && [ $TOPOLOGY_ROLE = "follower" ] ; then
+  warn_wait_encrypt_token
+elif [ $TOKEN_EXISTS -eq 1 ] && [ $TOPOLOGY_ROLE = "standalone" ] ; then
+  exec consul agent -bootstrap-expect 1 -config-file={{pkg.svc_config_path}}/basic_config.json
+else # token exists and topology is 'leader'
+  if [ $TOPOLOGY_ROLE = "follower" ] ; then
     until curl {{svc.leader.sys.ip}}:{{cfg.ports.http}}/v1/agent/members;
     do
       echo "Waiting for {{svc.leader.sys.ip}}:{{cfg.ports.http}}/v1/agent/members"
       sleep 1
     done
-  {{/if ~}}
-
-  {{#if cfg.encrypt.token ~}}
-    consul agent {{~#if cfg.website}} -ui {{~/if}} -server -bootstrap-expect {{cfg.bootstrap.expect}} -config-file={{pkg.svc_config_path}}/basic_config.json
-  {{else ~}}
-    echo "Waiting for encryption token!"
-  {{/if ~}}
-
-else
-  exec consul agent -dev
+  fi
+  exec consul agent -config-file={{pkg.svc_config_path}}/basic_config.json
 fi
