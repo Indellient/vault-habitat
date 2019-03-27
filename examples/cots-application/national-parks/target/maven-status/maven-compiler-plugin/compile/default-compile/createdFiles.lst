@@ -1,0 +1,4 @@
+io/chef/nationalparks/rest/JaxrsConfig.class
+io/chef/nationalparks/rest/NationalParksResource.class
+io/chef/nationalparks/domain/NationalPark.class
+io/chef/nationalparks/mongo/DBConnection.class

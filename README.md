@@ -107,3 +107,30 @@ $ curl -s localhost:9631/census | jq -r '.["census_groups"]["vault.default"].ser
 The Consul UI is now available here: `http://localhost:8200/ui`
 
 The Vault UI is located here: `http://localhost:8500/ui`
+
+# Application Examples
+
+Two examples are included with this repository in the `examples/` folder that show two Habitat-Vault integration strategies, making use of a Java Web Application reading data from a database that is protected by a username and password.
+
+The `cots-application` example application mimics a closed-source or third-party application without Vault integration that requires a username and password. We make use of Habitat to integrate this application with Vault transparently, see the `README` in the corresponding folder for more details.
+
+The `shim-package` example modifies the Java application to integrate directly with vault, making use of AppRole authentication, now requiring system properties for the `secret-id` and `role-id` to be set. This example showcases how we make use of Habitat to integrate with a Non-Habitat Vault through the use of a `shim-package`. See the corresponding `README` for more information.
+
+Note that there are in fact two different sets of patterns shown the above examples that can be combined as required:
+
+|                      | Habitat Vault | Non-Habitat Vault |
+| -------------------- | ------------- | ----------------- |
+| Server Configuration | Configurations used to bootstrap Vault are exported through binds | Configurations to the Shim Package are exported through binds |
+| Server Configuration Updates | Applications Automatically Reconfigure based on Vault Package configuration changes | Shim package must be reconfigured manually. Applications will reconfigure based on shim package's configuration. |
+
+Looking at the table above we can see that while it is feasible to use a Non-Habitat Vault, some manual intervention is required and there is some room for error. As such, this approach is recommended when first experimenting with Habitat, or when first transitioning before all your applications - including vault - are brought over to the Habitat world.
+
+
+|                      | Vault-Integrated Application | Non-Integrated Application |
+| -------------------- | ---------------------------- | -------------------------------- |
+| Secret Retrieval & Management | Handled by Application | Handled by Package Hooks |
+| Awareness of Vault/Secrets | Application must make use of Vault properly | Application does not need to be aware of Vault, or secret configurations (location, etc.) |
+
+Looking now at applications that are integrated with Vault as well as applications without direct integration, we see a much more subjective choice. Integrating an application directly with Vault may be more powerful in its interaction with other applications, and can allow you to make use of fully-fledged programming languages to handle secret management, leases and renewals. On the other hand, hooks can be transferrable between applications of different languages and can function without the application itself needing to be modified. This leads to a situation where either solution is viable depending on the developer's expertise, resources and the application-specific requirements.
+
+In these examples, we show the use of a **Vault running in Habitat** with a application that is **not vault integrated**, as well as a **Non-Habitat Vault** with a **Vault-Integrated** Application. It is possible to make use of a Vault-Integrated application using a Vault Habitat Package, as well as using a non-integrated application with a shim package.

@@ -1,0 +1,4 @@
+/src/examples/shim-package/national-parks/src/main/java/io/chef/nationalparks/rest/NationalParksResource.java
+/src/examples/shim-package/national-parks/src/main/java/io/chef/nationalparks/domain/NationalPark.java
+/src/examples/shim-package/national-parks/src/main/java/io/chef/nationalparks/mongo/DBConnection.java
+/src/examples/shim-package/national-parks/src/main/java/io/chef/nationalparks/rest/JaxrsConfig.java

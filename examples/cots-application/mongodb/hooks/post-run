@@ -1,0 +1,44 @@
+#!/bin/bash -xe
+
+exec 2>&1
+
+# Export Vault environment (since vault kv get will be a child process)
+export VAULT_ADDR="http://{{bind.vault.first.sys.ip}}:{{bind.vault.first.cfg.port}}"
+
+CREDENTIALS=$(vault write auth/approle/login --format=json \
+  role_id="{{cfg.vault.role-id}}" \
+  secret_id="{{cfg.vault.secret-id}}")
+
+export VAULT_TOKEN=$(echo $CREDENTIALS | jq -r .auth.client_token)
+
+MONGODB_ADMIN_USERNAME=$(vault kv get -field=username secret/mongodb/username)
+MONGODB_ADMIN_PASSWORD=$(vault kv get -field=password secret/mongodb/password)
+
+echo "Running migration"
+mongoimport \
+    -u $MONGODB_ADMIN_USERNAME \
+    -p $MONGODB_ADMIN_PASSWORD \
+    --authenticationDatabase admin \
+    --drop \
+    -d {{cfg.mongod.db.name}} \
+    -c nationalparks \
+    --type json \
+    --jsonArray \
+    --file {{pkg.path}}/national-parks.json \
+    --host={{sys.ip}} \
+    --port={{cfg.mongod.net.port}}
+
+# Set up the Vault Database Secrets Engine
+vault write database/config/{{cfg.mongod.db.name}} \
+    plugin_name=mongodb-database-plugin \
+    allowed_roles="{{cfg.vault.client-role}}" \
+    connection_url="mongodb://$MONGODB_ADMIN_USERNAME:$MONGODB_ADMIN_PASSWORD@{{sys.ip}}:{{cfg.mongod.net.port}}/admin?ssl={{cfg.mongod.net.ssl.enabled}}" \
+    username=$MONGODB_ADMIN_USERNAME \
+    password=$MONGODB_ADMIN_PASSWORD
+
+# Create role for clients
+vault write database/roles/{{cfg.vault.client-role}} \
+    db_name={{cfg.mongod.db.name}} \
+    default_ttl="30m" \
+    max_ttl="768h" \
+    creation_statements='{ "db": "{{cfg.mongod.db.name}}", "roles": [{ "role": "read" }] }'
