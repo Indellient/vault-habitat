@@ -1,0 +1,19 @@
+#!/bin/bash -xe
+
+exec 2>&1
+
+PORT={{cfg.port}}
+IP={{cfg.ip-address}}
+
+echo "Port defined as ($PORT)"
+echo "IP address defined as ($IP)"
+
+if [ -z "$PORT" ] || [ -z "$IP" ]
+then
+  echo "Waiting on Port and IP..."
+  sleep 1
+  exit 1
+
+else
+  while true; do sleep 300; done;
+fi

@@ -1,0 +1,39 @@
+#!/bin/bash -xe
+
+exec 2>&1
+
+echo "Starting Apache Tomcat"
+
+export VAULT_ADDR="http://{{bind.vault.first.sys.ip}}:{{bind.vault.first.cfg.port}}"
+
+if [ -z "{{cfg.vault.role-id}}" ] || [ -z "{{cfg.vault.secret-id}}" ]
+then
+  echo "Waiting for vault secret ID or Role ID..."
+  sleep 5
+  exit 1
+fi
+
+CREDENTIALS=$(vault write auth/approle/login --format=json \
+  role_id="{{cfg.vault.role-id}}" \
+  secret_id="{{cfg.vault.secret-id}}")
+
+export VAULT_TOKEN=$(echo $CREDENTIALS | jq -r .auth.client_token)
+
+credentials=$(vault read -format json database/creds/{{bind.database.first.cfg.vault-role}})
+
+username=$(echo $credentials | jq -r '.data.username')
+password=$(echo $credentials | jq -r '.data.password')
+# leaseId=$(echo $credentials | jq -r '.lease_id')
+# leaseRenewable=$(echo $credentials | jq -r '.renewable')
+# lease=$(echo $credentials | jq -r '.lease_duration')
+
+export TOMCAT_HOME={{pkg.svc_var_path}}/tc
+export CATALINA_OPTS="-DMONGODB_SERVICE_HOST={{bind.database.first.sys.ip}} \
+    -DMONGODB_SERVICE_PORT={{bind.database.first.cfg.port}} \
+    -DMONGODB_USERNAME=$username \
+    -DMONGODB_PASSWORD=$password \
+    -DMONGODB_DATABASE={{bind.database.first.cfg.db}}"
+
+cp {{pkg.path}}/{{pkg.name}}.war $TOMCAT_HOME/webapps
+
+exec ${TOMCAT_HOME}/bin/catalina.sh run

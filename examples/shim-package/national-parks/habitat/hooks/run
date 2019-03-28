@@ -1,0 +1,18 @@
+#!/bin/bash -xe
+
+exec 2>&1
+
+echo "Starting Apache Tomcat"
+
+export TOMCAT_HOME={{pkg.svc_var_path}}/tc
+export CATALINA_OPTS="-DMONGODB_SERVICE_HOST={{bind.database.first.sys.ip}} \
+        -DMONGODB_SERVICE_PORT={{bind.database.first.cfg.port}} \
+        -DMONGODB_DATABASE={{bind.database.first.cfg.db}} \
+        -DMONGODB_VAULT_ROLE={{bind.database.first.cfg.vault-role}} \
+        -DVAULT_ADDRESS=http://{{bind.vault.first.cfg.ip-address}}:{{bind.vault.first.cfg.port}} \
+        -DVAULT_ROLE_ID={{cfg.vault.role-id}} \
+        -DVAULT_SECRET_ID={{cfg.vault.secret-id}}"
+
+cp {{pkg.path}}/{{pkg.name}}.war $TOMCAT_HOME/webapps
+
+exec ${TOMCAT_HOME}/bin/catalina.sh run

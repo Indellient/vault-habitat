@@ -10,7 +10,6 @@ function main() {
 function build_package() {
   hab studio build $1/
   mv results/last_build.env results/${1}_last_build.env
-
 }
 
 main $@

@@ -1,13 +1,14 @@
 # Habitat package: vault
 
+Using `core/vault` as a baseline.
+
 ## Description
 
-Provide a brief description of the `vault` plan / purpose.
+Indellient wrapper of the core/vault habitat package, adds unsealing & enables confiured engines on initialization
 
 ## Usage
 
-Describe the general usage for the `vault` plan
+This packages is intended to be used in a clustered environment, but can be run on a single instance
 
-## Backup & Restore
-
-Follow the steps in `vault-terraform/README.md` to verify backup and restore functionality of vault + consul.
+For examples on how the clustering should roughly look please consult
+`kitchen.yml`

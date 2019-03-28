@@ -1,26 +1,25 @@
 # switch this to false you want to start in DEVMODE
 # https://www.vaultproject.io/intro/getting-started/dev-server.html
 
-ui = true
+ui          = true
+unseal_keys = []
+token       = ""
+
+[[engines]]
+name = "kv"
+path = "secret/"
 
 [dev]
 mode = false
 
 [backend]
 storage = "consul"
-location = "127.0.0.1"
-port = "8500"
-path = "vault"
+path    = "vault"
 
 [listener]
-type = "tcp"
-protocol = "http"
+type             = "tcp"
 cluster_location = "0.0.0.0"
-cluster_port = "8201"
-location = "0.0.0.0"
-port = "8200"
-tls_disable = "1"
-
-[config]
-unseal = false
-token = ""
+cluster_port     = 8201
+location         = "0.0.0.0"
+port             = 8200
+tls_disable      = "1"

@@ -26,3 +26,6 @@ crash.log
 root_token
 
 .kitchen/
+
+# Maven
+target/

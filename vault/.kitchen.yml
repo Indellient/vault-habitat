@@ -15,7 +15,7 @@ suites:
   - name: consul_leonardo
     provisioner:
       depot_url: http://bldr.bluepipeline.io
-      package_origin: skylerto
+      package_origin: indellient
       package_name: consul
       service_update_strategy: rolling
       service_topology: leader
@@ -35,7 +35,7 @@ suites:
   - name: consul_donatello
     provisioner:
       depot_url: http://bldr.bluepipeline.io
-      package_origin: skylerto
+      package_origin: indellient
       package_name: consul
       service_update_strategy: rolling
       service_topology: leader
@@ -51,7 +51,7 @@ suites:
   - name: consul_michelangelo
     provisioner:
       depot_url: http://bldr.bluepipeline.io
-      package_origin: skylerto
+      package_origin: indellient
       package_name: consul
       service_update_strategy: rolling
       service_topology: leader

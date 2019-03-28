@@ -1,0 +1,54 @@
+#!/bin/bash -xe
+
+exec 2>&1
+
+# Wipe existing MongoDB data
+rm -rf {{pkg.svc_data_path}}/db
+
+mkdir -p {{pkg.svc_data_path}}/db
+mkdir -p {{pkg.svc_files_path}}/tmp
+
+# Export Vault environment (since vault kv put/get will be child processes)
+export VAULT_ADDR="http://{{bind.vault.first.sys.ip}}:{{bind.vault.first.cfg.port}}"
+
+if [ -z "{{cfg.vault.role-id}}" ] || [ -z "{{cfg.vault.secret-id}}" ]
+then
+  echo "Waiting for vault secret ID or Role ID..."
+  sleep 5
+  exit 1
+fi
+
+CREDENTIALS=$(vault write auth/approle/login --format=json \
+  role_id="{{cfg.vault.role-id}}" \
+  secret_id="{{cfg.vault.secret-id}}")
+
+export VAULT_TOKEN=$(echo $CREDENTIALS | jq -r .auth.client_token)
+
+# Run the mongodb daemon with authorization disabled, and create the admin user
+nohup mongod --port {{cfg.mongod.net.port}} \
+             --bind_ip 127.0.0.1 \
+             --dbpath {{pkg.svc_data_path}}/db \
+             2>&1 \
+             &
+pid=$!
+
+# Wait for mongodb to listen on the specified port
+while ! nc -w 1 -vz 127.0.0.1 {{cfg.mongod.net.port}}; do
+  sleep 0.1
+done
+
+mongo --port {{cfg.mongod.net.port}} admin \
+<<EOF
+db.createUser(
+  {
+    user:  "$(vault kv get -field=username secret/mongodb/username)",
+    pwd:   "$(vault kv get -field=password secret/mongodb/password)",
+    roles: [
+      { role: "userAdminAnyDatabase", db: "admin" },
+      "readWriteAnyDatabase"
+    ]
+  }
+)
+EOF
+
+kill $pid

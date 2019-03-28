@@ -1,17 +1,14 @@
 # Habitat package: consul
 
+Using `core/consul` as a baseline.
+
 ## Description
 
-Bluepipeline Specific wrapper of the core/consul habitat package.
+Indellient wrapper of the core/consul habitat package.
 
 ## Usage
 
-This packages is to be used in a clustered environment.
+This packages is intended to be used in a clustered environment, but can be run on a single instance
 
-For examples on how the clustering should roughly look please consult the
-kitchen.yml
-
-## Contributing
-
-First, see the documentation on setting up habitat for local dev.
-
+For examples on how the clustering should roughly look please consult
+`kitchen.yml`
