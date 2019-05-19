@@ -1,0 +1,9 @@
+#!/bin/bash
+
+exec 2>&1
+
+CONF_FILE="{{pkg.svc_config_path}}/haproxy.conf"
+
+ulimit -n {{cfg.maxfiles}}
+
+exec haproxy -f ${CONF_FILE} -db

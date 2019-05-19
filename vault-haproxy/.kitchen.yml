@@ -1,0 +1,134 @@
+driver:
+  name: docker
+  binary: /usr/local/bin/docker
+  use_sudo: false
+  http_proxy: <%= ENV['http_proxy'] %>
+  https_proxy: <%= ENV['http_proxy'] %>
+  no_proxy: <%= ENV['no_proxy'] %>
+
+provisioner:
+  name: habitat
+  depot_url: https://bldr.indellient.io
+
+verifier:
+  name: inspec
+
+platforms:
+  - name: centos-7.4
+
+suites:
+  - name: consul_leonardo
+    driver:
+        instance_name: leonardo
+        hostname: leonardo
+        forward:
+          - 8300:8300
+          - 8500:8500
+          - 8600:8600
+          - 9631:9631
+          - 9632:9632
+    provisioner:
+      package_origin: indellient
+      package_name: consul
+      service_update_strategy: rolling
+      service_topology: leader
+
+  - name: consul_donatello
+    driver:
+      links: "leonardo:leonardo"
+      hostname: donatello
+    provisioner:
+      package_origin: indellient
+      package_name: consul
+      service_update_strategy: rolling
+      service_topology: leader
+      hab_sup_peer:
+        - leonardo
+
+  - name: consul_michelangelo
+    driver:
+      links: "leonardo:leonardo"
+      hostname: michelangelo
+    provisioner:
+      service_update_strategy: rolling
+      service_topology: leader
+      package_origin: indellient
+      package_name: consul
+      hab_sup_peer:
+        - leonardo
+
+  - name: vault_lennon
+    driver:
+      links: "leonardo:leonardo"
+      instance_name: lennon
+      forward:
+        - 8200:8200
+        - 8201:8201
+        - 9641:9631
+        - 9642:9632
+      hostname: lennon
+    provisioner:
+      package_origin: indellient
+      package_name: vault
+      service_update_strategy: rolling
+      service_topology: leader
+      hab_sup_bind:
+        - backend:consul.default
+      hab_sup_peer:
+        - leonardo
+
+  - name: vault_mccartney
+    driver:
+      links:
+        - "leonardo:leonardo"
+        - "lennon:lennon"
+      hostname: mccartney
+    provisioner:
+      package_origin: indellient
+      package_name: vault
+      service_topology: leader
+      service_update_strategy: rolling
+      hab_sup_bind:
+        - backend:consul.default
+      hab_sup_peer:
+        - leonardo
+
+  - name: vault_harrison
+    driver:
+      links:
+        - "leonardo:leonardo"
+        - "lennon:lennon"
+      hostname: harrison
+    provisioner:
+      package_origin: indellient
+      package_name: vault
+      service_topology: leader
+      service_update_strategy: rolling
+      hab_sup_bind:
+        - backend:consul.default
+      hab_sup_peer:
+        - leonardo
+
+  - name: haproxy_mozart
+    driver:
+      links:
+        - "leonardo:leonardo"
+        - "lennon:lennon"
+      hostname: mozart
+      instance_name: mozart
+      forward:
+        - 80:80
+        - 443:443
+        - 9000:9000
+    provisioner:
+      package_origin: skylerto
+      package_name: vault_haproxy
+      install_latest_artifact: true
+      service_topology: standalone
+      service_update_strategy: rolling
+      hab_sup_bind:
+        - backend:vault.default
+        - consul:consul.default
+      hab_sup_peer:
+        - leonardo
+        - lennon
