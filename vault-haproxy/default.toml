@@ -1,0 +1,20 @@
+#set debug to "true" to enable output to nohup for the package
+debug = """
+"""
+
+maxconn = 32
+httpchk = "GET /"
+maxfiles = 10000
+
+[front-end]
+listen = "*"
+port = 80
+mode = "http"
+
+[status]
+enabled = true
+listen = "*"
+port = 9000
+user = "admin"
+password = "password"
+uri = "/haproxy?stats"
