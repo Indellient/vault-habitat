@@ -1,9 +1,8 @@
-#!/bin/bash -xe
+#!/bin/bash -e
 
 exec 2>&1
 
-if [ {{cfg.dev.mode}} = true ]
-then
+if [ "{{cfg.dev.mode}}" = true ]; then
   echo "Starting vault server in dev mode..."
   exec vault server \
     -dev \
@@ -12,7 +11,7 @@ then
 else
   # Set variables
   UNSEAL_KEYS=({{#each cfg.unseal_keys as |key| ~}}"{{key}}"{{#unless @last}} {{/unless}}{{/each}})
-  export VAULT_ADDR="http://{{cfg.listener.location}}:{{cfg.listener.port}}"
+  export VAULT_ADDR="https://{{cfg.listener.location}}:{{cfg.listener.port}}"
   export VAULT_TOKEN="{{cfg.token}}"
 
   # Shortcut to determine if this is the leader in a leader-follower topology
@@ -46,41 +45,38 @@ else
   # 0 - Unsealed
   # 1 - Error
   # 2 - Sealed
-  until STATUS=$(vault status -format "json"); [ $? -ne 1 ]
-  do
-    echo "Waiting for vault to come up"
+  until STATUS=$(curl --insecure --silent ${VAULT_ADDR}/v1/sys/health); do
+    echo "Waiting for vault to come up..."
     sleep 1
   done
 
-  INITIALIZED=$(echo $STATUS | jq .initialized)
-  SEALED=$(echo $STATUS | jq .sealed)
+  INITIALIZED=$(echo ${STATUS} | jq .initialized)
+  SEALED=$(echo ${STATUS} | jq .sealed)
 
-  if [ "$INITIALIZED" = true ]
-  then
+  if [ "${INITIALIZED}" = true ]; then
     # If the instance is initialized, unseal it
     echo "Vault already initialized"
 
-    if [ ${#UNSEAL_KEYS[@]} -ne 0 ]
-    then
+    if [ ${#UNSEAL_KEYS[@]} -ne 0 ]; then
       echo "Vault initialized, but sealed. Unseal keys found; Unsealing..."
 
       for key in "${UNSEAL_KEYS[@]}"
       do
-        vault operator unseal $key;
+        vault operator unseal -tls-skip-verify "${key}";
       done
 
-      engines=$(vault secrets list --format "json" | jq -r '.[].type')
+      engines=$(vault secrets list -tls-skip-verify --format "json" | jq -r '.[].type')
       {{#each cfg.engines as |engine| ~}}
         if [[ ! "${engines[@]}" =~ "{{engine.name}}" ]]; then
           echo "Enabling secret engine {{engine.name}}"
-          vault secrets enable --path {{engine.path}} {{engine.name}}
+          vault secrets enable -tls-skip-verify --path {{engine.path}} {{engine.name}}
         else
           echo "Secret engine {{engine.name}} already enabled; skipping..."
         fi
       {{/each ~}}
 
       # Block on vault server process
-      wait $PID
+      wait ${PID}
 
     else
       # Initialized, no unseal keys. We don't have the config yet.
@@ -89,26 +85,25 @@ else
       sleep 5
     fi
 
-  elif [ "$TOPOLOGY" = "standalone" ] || [ $TOPOLOGY_ROLE = "leader" ]
-  then
-    # If this instance is not initilaized, the leader should initialize
+  elif [ "${TOPOLOGY}" == "standalone" ] || [ "${TOPOLOGY_ROLE}" == "leader" ]; then
+    # If this instance is not initialized, the leader should initialize
     echo "Vault not initialized. Initializing...."
-    init=$(vault operator init -format "json")
+    init=$(vault operator init -tls-skip-verify -format "json")
 
     echo "Applying new config with unseal keys..."
     # Apply config then fall through to kill command & let Habitat restart service
     hab config apply "{{svc.service}}.{{svc.group}}" "$(date +%s)" <<EOF
-token       = $(echo $init | jq .root_token)
-unseal_keys = $(echo $init | jq .unseal_keys_b64)
+token       = $(echo ${init} | jq .root_token)
+unseal_keys = $(echo ${init} | jq .unseal_keys_b64)
 EOF
 
   else
     # Uninitialized, follower in leader topology; wait for leader to initialize
-    echo "Vault not initalized. Waiting for leader to initalize..."
+    echo "Vault not initialized. Waiting for leader to initialize..."
     # Sleep then fall through to kill command & let Habitat restart service
     sleep 5
   fi
 
   # Kill vault server
-  kill $PID
+  kill ${PID}
 fi

@@ -22,4 +22,6 @@ cluster_location = "0.0.0.0"
 cluster_port     = 8201
 location         = "0.0.0.0"
 port             = 8200
-tls_disable      = "1"
+tls_disable      = false
+# tls_cert_file    = ""
+# tls_key_file     = ""
