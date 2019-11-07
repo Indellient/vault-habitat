@@ -12,7 +12,7 @@ then
 else
   # Set variables
   UNSEAL_KEYS=({{#each cfg.unseal_keys as |key| ~}}"{{key}}"{{#unless @last}} {{/unless}}{{/each}})
-  export VAULT_ADDR="http://{{cfg.listener.location}}:{{cfg.listener.port}}"
+  export VAULT_ADDR="{{#unless cfg.listener.tls_disable ~}}https{{/unless}}{{#if cfg.listener.tls_disable ~}}http{{/if}}://{{cfg.listener.location}}:{{cfg.listener.port}}"
   export VAULT_TOKEN="{{cfg.token}}"
 
   # Shortcut to determine if this is the leader in a leader-follower topology
