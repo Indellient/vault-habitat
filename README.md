@@ -104,9 +104,9 @@ To get the vault root token, grab it from the habitat census:
 $ curl -s localhost:9631/census | jq -r '.["census_groups"]["vault.default"].service_config.value.token'
 ```
 
-The Consul UI is now available here: `http://localhost:8200/ui`
+The Vault UI is now available here: `http://localhost:8200/ui`
 
-The Vault UI is located here: `http://localhost:8500/ui`
+The Consul UI is located here: `http://localhost:8500/ui`
 
 # Application Examples
 
