@@ -15,6 +15,7 @@ suites:
   - name: consul_leonardo
     provisioner:
       artifact_name: <%= ENV['CONSUL_PACKAGE']  %>
+      hab_license: accept
       install_latest_artifact: true
       service_update_strategy: rolling
       service_topology: leader
@@ -34,6 +35,7 @@ suites:
   - name: consul_donatello
     provisioner:
       artifact_name: <%= ENV['CONSUL_PACKAGE']  %>
+      hab_license: accept
       install_latest_artifact: true
       service_update_strategy: rolling
       service_topology: leader
@@ -49,21 +51,7 @@ suites:
   - name: consul_michelangelo
     provisioner:
       artifact_name: <%= ENV['CONSUL_PACKAGE']  %>
-      install_latest_artifact: true
-      service_update_strategy: rolling
-      service_topology: leader
-      config_directory: test/files/consul
-      hab_sup_peer:
-        - leonardo
-    driver:
-      links: "leonardo:leonardo"
-    verifier:
-      inspec_tests:
-      - test/smoke/consul
-
-  - name: consul_raphael
-    provisioner:
-      artifact_name: <%= ENV['CONSUL_PACKAGE']  %>
+      hab_license: accept
       install_latest_artifact: true
       service_update_strategy: rolling
       service_topology: leader
@@ -79,6 +67,7 @@ suites:
   - name: vault_lennon
     provisioner:
       artifact_name: <%= ENV['VAULT_PACKAGE']  %>
+      hab_license: accept
       install_latest_artifact: true
       service_update_strategy: rolling
       service_topology: leader
@@ -105,6 +94,7 @@ suites:
     provisioner:
       artifact_name: <%= ENV['VAULT_PACKAGE']  %>
       install_latest_artifact: true
+      hab_license: accept
       service_topology: leader
       service_update_strategy: rolling
       config_directory: test/files/vault
@@ -126,6 +116,7 @@ suites:
     provisioner:
       artifact_name: <%= ENV['VAULT_PACKAGE']  %>
       install_latest_artifact: true
+      hab_license: accept
       service_topology: leader
       service_update_strategy: rolling
       config_directory: test/files/vault
