@@ -11,7 +11,7 @@
         <dependency>
             <groupId>org.jboss.resteasy</groupId>
             <artifactId>resteasy-jaxrs</artifactId>
-            <version>3.0.17.Final</version>
+            <version>3.0.26.Final</version>
         </dependency>
         <dependency>
             <groupId>org.jboss.resteasy</groupId>
